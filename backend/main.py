@@ -39,14 +39,11 @@ app.mount("/songs", StaticFiles(directory=str(SONGS_DIR)), name="songs")
 # -----------------------------
 # CONFIGURE GEMINI API
 # -----------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc")
-genai.configure(api_key=GEMINI_API_KEY)
+# --- 🚨 FINAL ERROR FIX 🚨 ---
+genai.configure(api_key="AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc")
 
-# --- 🚨 FIXED MODEL INITIALIZATION 🚨 ---
-# Hugging Face ke naye environment ke liye 'gemini-1.5-flash' use karna best hai
-MODEL_NAME = "gemini-1.5-flash" 
-chat_model = genai.GenerativeModel(model_name=MODEL_NAME)
-
+# Model ka naam hum string me hardcode karenge mismatch se bachne ke liye
+chat_model = genai.GenerativeModel('gemini-1.5-flash')
 # -----------------------------
 # REQUEST MODELS
 # -----------------------------

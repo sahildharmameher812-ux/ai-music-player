@@ -1,5 +1,5 @@
 // Backend API Base URL
-export const BACKEND_URL = "https://huggingface.co/spaces/sahil-ai/ai-music-backend";
+export const BACKEND_URL = "https://sahil-ai-ai-music-backend.hf.space";
 
 // Analyze Face
 export const analyzeFace = async (imageBase64) => {

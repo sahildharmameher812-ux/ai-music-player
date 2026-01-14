@@ -20,10 +20,10 @@ import google.generativeai as genai
 import os
 
 
-app = FastAPI(title="AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc", version="3.0")
+app = FastAPI(title="AI Music Player Backend", version="3.0")
 
 
-# Enable CORS
+# Enable CORS - FIXED FOR VERCEL
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,14 +41,15 @@ app.mount("/songs", StaticFiles(directory=str(SONGS_DIR)), name="songs")
 
 
 # -----------------------------
-# CONFIGURE GEMINI API
+# CONFIGURE GEMINI API - FIXED FOR HUGGINGFACE SECRETS
 # -----------------------------
-GEMINI_API_KEY = "AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc"
+# Hugging Face Settings -> Secrets mein 'GEMINI_API_KEY' add karna zaroori hai
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc")
 genai.configure(api_key=GEMINI_API_KEY)
 
 
 # Model family (working one)
-MODEL_NAME = "gemini-flash-latest"   # ya "gemini-2.5-flash" agar isme issue aaye
+MODEL_NAME = "gemini-1.5-flash"   # Updated to latest stable flash model
 chat_model = genai.GenerativeModel(MODEL_NAME)
 
 
@@ -167,12 +168,17 @@ def load_models():
 # HELPER FUNCTIONS
 # -----------------------------
 def decode_image(base64_str):
+    # Handle base64 prefix if present
+    if "," in base64_str:
+        base64_str = base64_str.split(",")[1]
     image_data = base64.b64decode(base64_str)
     image = Image.open(io.BytesIO(image_data)).convert("RGB")
     return image
 
 
 def decode_audio(base64_str):
+    if "," in base64_str:
+        base64_str = base64_str.split(",")[1]
     audio_data = base64.b64decode(base64_str)
     # frontend se float32 raw aa raha hai (detect.html waala)
     audio = np.frombuffer(audio_data, dtype=np.float32)

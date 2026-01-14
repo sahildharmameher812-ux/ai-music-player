@@ -4,7 +4,7 @@ transformers
 torch
 torchvision
 torchaudio
-google-generativeai
+google-generativeai==0.8.3
 python-multipart
 opencv-python-headless
 pillow

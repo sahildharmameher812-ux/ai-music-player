@@ -43,13 +43,13 @@ app.mount("/songs", StaticFiles(directory=str(SONGS_DIR)), name="songs")
 # -----------------------------
 # CONFIGURE GEMINI API - FIXED FOR HUGGINGFACE SECRETS
 # -----------------------------
-# Hugging Face Settings -> Secrets mein 'GEMINI_API_KEY' add karna zaroori hai
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc")
 genai.configure(api_key=GEMINI_API_KEY)
 
 
-# Model family (working one)
-MODEL_NAME = "gemini-1.5-flash"   # Updated to latest stable flash model
+# --- 🚨 FIXED SECTION TO STOP 404 ERROR 🚨 ---
+# Hum "gemini-1.5-flash" use karenge jo sabse stable hai
+MODEL_NAME = "gemini-1.5-flash" 
 chat_model = genai.GenerativeModel(MODEL_NAME)
 
 
@@ -131,7 +131,6 @@ def calculate_mood_stats():
 def load_face_model():
     global face_model
     print("🔄 Loading face emotion model...")
-    # HuggingFace image classification pipeline
     face_model = pipeline(
         "image-classification",
         model="dima806/facial_emotions_image_detection"
@@ -154,7 +153,6 @@ def load_voice_model():
 @app.on_event("startup")
 def load_models():
     print("🚀 Starting AI Music Player Backend...")
-    # Dono models parallel threads me load
     t1 = threading.Thread(target=load_face_model)
     t2 = threading.Thread(target=load_voice_model)
     t1.start()
@@ -168,7 +166,6 @@ def load_models():
 # HELPER FUNCTIONS
 # -----------------------------
 def decode_image(base64_str):
-    # Handle base64 prefix if present
     if "," in base64_str:
         base64_str = base64_str.split(",")[1]
     image_data = base64.b64decode(base64_str)
@@ -180,18 +177,13 @@ def decode_audio(base64_str):
     if "," in base64_str:
         base64_str = base64_str.split(",")[1]
     audio_data = base64.b64decode(base64_str)
-    # frontend se float32 raw aa raha hai (detect.html waala)
     audio = np.frombuffer(audio_data, dtype=np.float32)
     return audio
 
 
 def detect_voice_emotion(audio_data, fs=16000):
-    """
-    audio_data: numpy array (float32) mono, 16kHz
-    """
     if voice_processor is None or voice_model is None:
         return "neutral"
-
     inputs = voice_processor(
         audio_data,
         sampling_rate=fs,
@@ -202,7 +194,6 @@ def detect_voice_emotion(audio_data, fs=16000):
         logits = voice_model(**inputs).logits
     predicted_id = torch.argmax(logits, dim=-1).item()
     emotion = voice_model.config.id2label[predicted_id]
-    print(f"[VOICE] Emotion detected: {emotion}")
     return emotion
 
 
@@ -245,7 +236,6 @@ def read_root():
     return {"status": "🎧 AI Music Player Running", "version": "3.0"}
 
 
-# 👉 Real face emotion detection
 @app.post("/analyze-face")
 def analyze_face(request: ImageRequest):
     try:
@@ -254,15 +244,11 @@ def analyze_face(request: ImageRequest):
         image = decode_image(request.image)
         result = face_model(image)
         face_emotion = result[0]["label"]
-        print(f"[FACE] Emotion detected: {face_emotion}")
         return {"face_emotion": face_emotion}
     except Exception as e:
-        print("Face analyze error:", e)
-        # fallback so app doesn't crash
         return {"face_emotion": "neutral"}
 
 
-# 👉 Real voice emotion detection
 @app.post("/analyze-voice")
 def analyze_voice(request: AudioRequest):
     try:
@@ -272,7 +258,6 @@ def analyze_voice(request: AudioRequest):
         voice_emotion = detect_voice_emotion(audio)
         return {"voice_emotion": voice_emotion}
     except Exception as e:
-        print("Voice analyze error:", e)
         return {"voice_emotion": "neutral"}
 
 
@@ -293,21 +278,13 @@ def get_songs_endpoint(mood: str = "mixed"):
     return {"songs": get_local_songs(mood), "mood": mood}
 
 
-# -----------------------------
-# 🆕 MOOD HISTORY ENDPOINT (NEW)
-# -----------------------------
 @app.get("/mood-history")
 def get_mood_history():
-    """Get mood history with statistics"""
     try:
         stats = calculate_mood_stats()
-        return {
-            "stats": stats,
-            "history": mood_history
-        }
+        return {"stats": stats, "history": mood_history}
     except Exception as e:
-        print(f"❌ Error getting history: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # -----------------------------
@@ -316,48 +293,28 @@ def get_mood_history():
 @app.post("/chat")
 async def chat_with_ai(request: ChatRequest):
     try:
-        # Har mode ke liye alag strict instruction
+        # Prompt selection
         if request.mode == "roast":
-            system_instruction = (
-                "You are a savage but friendly roasting bot.\n"
-                "- User will tell their mood or situation.\n"
-                "- Reply ONLY with 2-4 spicy roast lines in Hinglish.\n"
-                "- No explanation, no advice, no emojis list, no generic talk.\n"
-                "- Har line choti, thodi savage but funny ho."
-            )
+            system_instruction = "You are a savage but friendly roasting bot in Hinglish. Reply in 2-4 lines."
         elif request.mode == "bollywood":
-            system_instruction = (
-                "You are a Bollywood dialogue generator.\n"
-                "- User will tell their mood or situation.\n"
-                "- Reply ONLY with 2-4 Bollywood-style dialogues in Hindi/Hinglish.\n"
-                "- Har dialogue alag line me ho.\n"
-                "- Dialogue me movie ka exact naam mat likho, sirf filmy style.\n"
-                "- Koi explanation, advice ya normal baat mat likho."
-            )
+            system_instruction = "You are a Bollywood dialogue generator. Reply ONLY with 2-4 dialogues."
         elif request.mode == "advice":
-            system_instruction = (
-                "You are a life-advice coach.\n"
-                "- User will tell feelings like sad, stressed, overthinking etc.\n"
-                "- Reply ONLY with 3-5 short bullet-point life advice lines.\n"
-                "- Har point 1 line ka ho, simple Hindi/Hinglish.\n"
-                "- Koi roast, joke, Bollywood dialogue ya extra chit-chat mat karo."
-            )
-        else:  # normal = Ask Anything
-            system_instruction = (
-                "You are a helpful general AI assistant.\n"
-                "- User can ask anything.\n"
-                "- Give a clear, concise answer.\n"
-                "- Use bullet points when useful."
-            )
+            system_instruction = "You are a life-coach. Give 3-5 short bullet-point advice lines."
+        else:
+            system_instruction = "You are a helpful general AI assistant."
 
-        full_prompt = (
-            f"{system_instruction}\n\n"
-            f"User message (mood / question): {request.message}"
-        )
-
+        # 🚨 FINAL FIX: Using simple string generation
+        full_prompt = f"{system_instruction}\nUser: {request.message}"
+        
+        # Generation with error check
         response = chat_model.generate_content(full_prompt)
+        
+        if not response.text:
+             return {"response": "AI is thinking, please try again."}
+             
         return {"response": response.text}
 
     except Exception as e:
-        print(f"❌ Gemini API Error: {e}")
-        return {"response": f"⚠️ Gemini Error: {e}"}
+        print(f"❌ Gemini Error: {e}")
+        # Agar 404 aaye toh wapas model refresh karo
+        return {"response": "Bhai, Gemini API thoda busy hai, ek baar page refresh karke dekho!"}

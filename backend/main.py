@@ -19,9 +19,7 @@ import json
 import google.generativeai as genai
 import os
 
-
 app = FastAPI(title="AI Music Player Backend", version="3.0")
-
 
 # Enable CORS - FIXED FOR VERCEL
 app.add_middleware(
@@ -32,26 +30,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Mount songs folder
 SONGS_DIR = Path(__file__).parent / "songs"
 if not SONGS_DIR.exists():
     SONGS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/songs", StaticFiles(directory=str(SONGS_DIR)), name="songs")
 
-
 # -----------------------------
-# CONFIGURE GEMINI API - FIXED FOR HUGGINGFACE SECRETS
+# CONFIGURE GEMINI API
 # -----------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyCAql65Fi_OnY-19ueE0XT8OyPObElbxtc")
 genai.configure(api_key=GEMINI_API_KEY)
 
-
 # --- 🚨 FIXED SECTION TO STOP 404 ERROR 🚨 ---
-# Hum "gemini-1.5-flash" use karenge jo sabse stable hai
+# Hum specifically flash model use karenge
 MODEL_NAME = "gemini-1.5-flash" 
-chat_model = genai.GenerativeModel(MODEL_NAME)
-
+chat_model = genai.GenerativeModel(model_name=MODEL_NAME)
 
 # -----------------------------
 # REQUEST MODELS
@@ -59,15 +53,12 @@ chat_model = genai.GenerativeModel(MODEL_NAME)
 class ImageRequest(BaseModel):
     image: str
 
-
 class AudioRequest(BaseModel):
     audio: str
-
 
 class MoodRequest(BaseModel):
     face_emotion: str
     voice_emotion: str
-
 
 class MoodHistoryEntry(BaseModel):
     mood: str
@@ -75,11 +66,9 @@ class MoodHistoryEntry(BaseModel):
     face_emotion: str
     voice_emotion: str
 
-
 class ChatRequest(BaseModel):
     message: str
     mode: str
-
 
 # -----------------------------
 # GLOBAL MODELS & DATA
@@ -90,12 +79,10 @@ voice_model = None
 mood_history: List[Dict] = []
 chat_history: Dict[str, list] = {}
 
-
 # -----------------------------
-# 🆕 HISTORY HELPER FUNCTION (NEW)
+# 🆕 HISTORY HELPER FUNCTION
 # -----------------------------
 def calculate_mood_stats():
-    """Calculate statistics from mood history"""
     if not mood_history:
         return {
             "total": 0,
@@ -104,17 +91,13 @@ def calculate_mood_stats():
             "last_7_moods": []
         }
     
-    # Count moods
     mood_counts = {"high": 0, "neutral": 0, "low": 0}
     for entry in mood_history:
         mood = entry.get("mood", "neutral")
         if mood in mood_counts:
             mood_counts[mood] += 1
     
-    # Most common mood
     most_common = max(mood_counts, key=mood_counts.get) if sum(mood_counts.values()) > 0 else None
-    
-    # Last 7 moods
     last_7 = mood_history[-7:] if len(mood_history) >= 7 else mood_history
     
     return {
@@ -123,7 +106,6 @@ def calculate_mood_stats():
         "mood_counts": mood_counts,
         "last_7_moods": last_7
     }
-
 
 # -----------------------------
 # LOAD AI MODELS (HUGGINGFACE)
@@ -137,7 +119,6 @@ def load_face_model():
     )
     print("✅ Face emotion model loaded!")
 
-
 def load_voice_model():
     global voice_processor, voice_model
     print("🔄 Loading voice emotion model...")
@@ -148,7 +129,6 @@ def load_voice_model():
         "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
     )
     print("✅ Voice emotion model loaded!")
-
 
 @app.on_event("startup")
 def load_models():
@@ -161,7 +141,6 @@ def load_models():
     t2.join()
     print("✅ All models loaded successfully!")
 
-
 # -----------------------------
 # HELPER FUNCTIONS
 # -----------------------------
@@ -172,14 +151,12 @@ def decode_image(base64_str):
     image = Image.open(io.BytesIO(image_data)).convert("RGB")
     return image
 
-
 def decode_audio(base64_str):
     if "," in base64_str:
         base64_str = base64_str.split(",")[1]
     audio_data = base64.b64decode(base64_str)
     audio = np.frombuffer(audio_data, dtype=np.float32)
     return audio
-
 
 def detect_voice_emotion(audio_data, fs=16000):
     if voice_processor is None or voice_model is None:
@@ -196,7 +173,6 @@ def detect_voice_emotion(audio_data, fs=16000):
     emotion = voice_model.config.id2label[predicted_id]
     return emotion
 
-
 def map_emotion_to_mood(face, voice):
     low = ["sad", "angry", "fear", "disgust"]
     high = ["happy", "surprise"]
@@ -206,7 +182,6 @@ def map_emotion_to_mood(face, voice):
         return "high"
     else:
         return "neutral"
-
 
 def get_local_songs(mood=None):
     if mood and mood != "mixed":
@@ -227,14 +202,12 @@ def get_local_songs(mood=None):
             })
     return songs
 
-
 # -----------------------------
 # API ENDPOINTS
 # -----------------------------
 @app.get("/")
 def read_root():
     return {"status": "🎧 AI Music Player Running", "version": "3.0"}
-
 
 @app.post("/analyze-face")
 def analyze_face(request: ImageRequest):
@@ -248,7 +221,6 @@ def analyze_face(request: ImageRequest):
     except Exception as e:
         return {"face_emotion": "neutral"}
 
-
 @app.post("/analyze-voice")
 def analyze_voice(request: AudioRequest):
     try:
@@ -259,7 +231,6 @@ def analyze_voice(request: AudioRequest):
         return {"voice_emotion": voice_emotion}
     except Exception as e:
         return {"voice_emotion": "neutral"}
-
 
 @app.post("/get-mood")
 def get_mood(request: MoodRequest):
@@ -272,11 +243,9 @@ def get_mood(request: MoodRequest):
     })
     return {"mood": mood}
 
-
 @app.get("/get-songs")
 def get_songs_endpoint(mood: str = "mixed"):
     return {"songs": get_local_songs(mood), "mood": mood}
-
 
 @app.get("/mood-history")
 def get_mood_history():
@@ -286,14 +255,12 @@ def get_mood_history():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # -----------------------------
-# 🤖 GEMINI CHAT ENDPOINT (STRICT MODES)
+# 🤖 GEMINI CHAT ENDPOINT
 # -----------------------------
 @app.post("/chat")
 async def chat_with_ai(request: ChatRequest):
     try:
-        # Prompt selection
         if request.mode == "roast":
             system_instruction = "You are a savage but friendly roasting bot in Hinglish. Reply in 2-4 lines."
         elif request.mode == "bollywood":
@@ -303,10 +270,9 @@ async def chat_with_ai(request: ChatRequest):
         else:
             system_instruction = "You are a helpful general AI assistant."
 
-        # 🚨 FINAL FIX: Using simple string generation
         full_prompt = f"{system_instruction}\nUser: {request.message}"
         
-        # Generation with error check
+        # Generation
         response = chat_model.generate_content(full_prompt)
         
         if not response.text:
@@ -316,5 +282,5 @@ async def chat_with_ai(request: ChatRequest):
 
     except Exception as e:
         print(f"❌ Gemini Error: {e}")
-        # Agar 404 aaye toh wapas model refresh karo
-        return {"response": "Bhai, Gemini API thoda busy hai, ek baar page refresh karke dekho!"}
+        # Agar abhi bhi error aaye toh user ko friendly message
+        return {"response": "Bhai, backend model refresh ho raha hai, ek baar Factory Reboot check karo!"}

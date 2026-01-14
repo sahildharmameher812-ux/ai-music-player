@@ -1,0 +1,45 @@
+/* ==========================================
+   APP GLOBAL STYLES
+========================================== */
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================
+   PAGE WRAPPER
+========================================== */
+
+.page-wrapper {
+  flex: 1;
+  min-height: calc(100vh - 80px);
+  padding-top: 80px; /* Navbar height */
+}
+
+/* ==========================================
+   LOADING SPINNER
+========================================== */
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+/* ==========================================
+   ERROR MESSAGE
+========================================== */
+
+.error-message {
+  text-align: center;
+  padding: 40px;
+  color: #ff6b6b;
+  font-size: 18px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid #ff6b6b;
+  border-radius: 12px;
+  margin: 40px 20px;
+}

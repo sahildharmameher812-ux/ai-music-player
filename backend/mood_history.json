@@ -1,0 +1,14 @@
+[
+  {
+    "mood": "high",
+    "timestamp": "2025-12-24T12:37:06.345851",
+    "face_emotion": "neutral",
+    "voice_emotion": "happy"
+  },
+  {
+    "mood": "neutral",
+    "timestamp": "2025-12-24T12:37:21.311019",
+    "face_emotion": "neutral",
+    "voice_emotion": "calm"
+  }
+]
